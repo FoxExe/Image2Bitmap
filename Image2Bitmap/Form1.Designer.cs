@@ -39,6 +39,7 @@
             this.GeneratedCode = new System.Windows.Forms.TextBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.btn_Convert = new System.Windows.Forms.Button();
+            this.convertProgress = new System.Windows.Forms.ProgressBar();
             this.groupBox1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.imageBox)).BeginInit();
             this.tabBox.SuspendLayout();
@@ -167,13 +168,22 @@
             this.btn_Convert.TabIndex = 2;
             this.btn_Convert.Text = "Convert!";
             this.btn_Convert.UseVisualStyleBackColor = true;
-            this.btn_Convert.Click += new System.EventHandler(this.btn_Convert_Click);
+            this.btn_Convert.Click += new System.EventHandler(this.Btn_Convert_Click);
+            // 
+            // convertProgress
+            // 
+            this.convertProgress.Location = new System.Drawing.Point(13, 215);
+            this.convertProgress.Name = "convertProgress";
+            this.convertProgress.Size = new System.Drawing.Size(199, 23);
+            this.convertProgress.Step = 1;
+            this.convertProgress.TabIndex = 4;
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(584, 301);
+            this.Controls.Add(this.convertProgress);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.tabBox);
             this.Controls.Add(this.groupBox1);
@@ -205,6 +215,7 @@
         private System.Windows.Forms.TextBox GeneratedCode;
         private System.Windows.Forms.GroupBox groupBox2;
         private System.Windows.Forms.Button btn_Convert;
+        private System.Windows.Forms.ProgressBar convertProgress;
     }
 }
 
