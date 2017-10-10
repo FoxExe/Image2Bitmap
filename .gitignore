@@ -1,0 +1,8 @@
+*~
+*.[oa]
+/.vs
+/Debug
+/*/__vm
+/*/Debug
+/*/obj
+/*/bin
