@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -20,7 +21,7 @@ namespace Image2Bitmap
             //BW8Bpp,
             RGB332,
             //RGB444,
-            //RGB565,
+            RGB565,
         }
 
         private Image OriginalImage;
@@ -34,19 +35,13 @@ namespace Image2Bitmap
             //selBox_Format.DataSource = Enum.GetValues(typeof(PixelFormat));
             selBox_Format.DataSource = Enum.GetValues(typeof(TransformColorFormats));
             selBox_Format.SelectedIndex = 0;
-
-            bgWork = new BackgroundWorker();
-            bgWork.WorkerReportsProgress = true;
-            bgWork.DoWork += new DoWorkEventHandler(ConvertImage);
-            bgWork.ProgressChanged += new ProgressChangedEventHandler(BgConvertProgress);
-            bgWork.RunWorkerCompleted += new RunWorkerCompletedEventHandler(ConvertDone);
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
 
         }
-
+        
         private void Btn_open_Click(object sender, EventArgs e)
         {
             OpenFileDialog openFile = new OpenFileDialog();
@@ -61,12 +56,13 @@ namespace Image2Bitmap
                     OriginalImage = Image.FromStream(openFile.OpenFile());
                     imageBox.Image = OriginalImage;
                     txt_imgSize.Text = string.Format(
-                        "Filename: {0}\nWidth:  {1}\nHeight: {2}\n{3}",
+                        "{0}\n{1}",
                         openFile.SafeFileName,
-                        OriginalImage.Width,
-                        OriginalImage.Height,
                         OriginalImage.PixelFormat.ToString()
                     );
+                    num_Width.Value = OriginalImage.Width;
+                    num_Height.Value = OriginalImage.Height;
+
                     tabBox.SelectedIndex = 0;   // First tab (Image)
                     btn_Convert.Enabled = true;
                 }
@@ -78,6 +74,7 @@ namespace Image2Bitmap
             }
         }
 
+#region Image2Code
         private String GenDrawCode_BW1BbppH(Image image)
         {
             String result = "uint8_t image = {" + Environment.NewLine + "\t";
@@ -190,6 +187,9 @@ namespace Image2Bitmap
                 int x_step = 0;
                 Color pixelColor;
 
+                // 6 = size of "0x12, ", 16 - every 16 lines we add newline and tab
+                StringBuilder str = new StringBuilder((bmp.Width * bmp.Height * 6) + (bmp.Width * bmp.Height / 16 * (Environment.NewLine.Length + 1)));
+
                 int pixelsTotal = bmp.Width * bmp.Height;
                 int pixelsCurrent = 0;
 
@@ -199,28 +199,85 @@ namespace Image2Bitmap
                     {
                         pixelColor = bmp.GetPixel(x, y);
                         // byte = 8 bit per color
-                        // RRRRRRRR
-                        int ColorByte = (pixelColor.R & 0xE0) | (pixelColor.G & 0xE0) >> 3 | (pixelColor.B & 0xC0) >> 6;
+                        // RRRG GGBB
+                        int ColorByte =
+                            (pixelColor.R & 0xE0) |
+                            (pixelColor.G & 0xE0) >> 3 |
+                            (pixelColor.B & 0xC0) >> 6;
 
-                        result += "0x" + ColorByte.ToString("X2") + ", ";
+                        //result += "0x" + ColorByte.ToString("X2") + ", ";
+                        str.AppendFormat("0x{0:x2}, ", ColorByte);
+
                         pixelsCurrent++;
 
                         x_step++;
                         if (x_step == 16)
                         {
                             x_step = 0;
-                            result += Environment.NewLine + "\t";
+                            //result += Environment.NewLine + "\t";
+                            str.Append(Environment.NewLine + "\t");
                         }
 
                         bgWork.ReportProgress((int)((double)pixelsCurrent / (double)pixelsTotal * 100));
                     }
                 }
+                result += str.ToString();
             }
             result += Environment.NewLine + "};";
             return result;
         }
 
-        private void ConvertImage(object sender, DoWorkEventArgs e)
+
+        private String GenDrawCode_RGB565(Image image)
+        {
+            String result = "uint8_t image = {" + Environment.NewLine + "\t";
+
+            using (Bitmap bmp = new Bitmap(image))
+            {
+                int x_step = 0;
+                Color pixelColor;
+
+                int pixelsTotal = bmp.Width * bmp.Height;
+                int pixelsCurrent = 0;
+
+                // 8 = size of "0x1234, ", 16 - every 16 lines we add newline and tab
+                StringBuilder str = new StringBuilder((bmp.Width * bmp.Height * 8) + (bmp.Width * bmp.Height / 16 * (Environment.NewLine.Length + 1)));
+
+                for (int y = 0; y < bmp.Height; y++)
+                {
+                    for (int x = 0; x < bmp.Width; x++)
+                    {
+                        pixelColor = bmp.GetPixel(x, y);
+                        // byte = 16 bit per color
+                        // RRRR RGGG GGGB BBBB
+                        int ColorByte = (pixelColor.R & 0xF8) << 8 |
+                            (pixelColor.G & 0xFC) << 3 |
+                            (pixelColor.B & 0xF8) >> 3;
+
+                        str.AppendFormat("0x{0:x4}, ", ColorByte);
+                        //result += "0x" + ColorByte.ToString("X4") + ", ";
+                        pixelsCurrent++;
+
+                        x_step++;
+                        if (x_step == 16)
+                        {
+                            x_step = 0;
+                            //result += Environment.NewLine + "\t";
+                            str.Append(Environment.NewLine + "\t");
+                        }
+
+                        bgWork.ReportProgress((int)((double)pixelsCurrent / (double)pixelsTotal * 100));
+                    }
+                }
+                result += str.ToString();
+            }
+            
+            result += Environment.NewLine + "};";
+            return result;
+        }
+        #endregion
+
+        private void ImageToCode(object sender, DoWorkEventArgs e)
         {
             switch (e.Argument)
             {
@@ -233,8 +290,71 @@ namespace Image2Bitmap
                 case TransformColorFormats.RGB332:
                     e.Result = GenDrawCode_RGB332(OriginalImage);
                     break;
+                case TransformColorFormats.RGB565:
+                    e.Result = GenDrawCode_RGB565(OriginalImage);
+                    break;
                 default:
                     MessageBox.Show("Sorry, unsupported.");
+                    break;
+            }
+        }
+
+        #region Code2Image
+        private Image GenImageFromCode_RGB332()
+        {
+            string Code = "";
+            int Width = 0, Height = 0;
+            int x = 0, y = 0;
+
+            this.Invoke(new MethodInvoker(delegate {
+                Width = (int)num_Width.Value;
+                Height = (int)num_Height.Value;
+                Code = GeneratedCode.Text;
+            }));
+
+            Bitmap result = new Bitmap(Width, Height, PixelFormat.Format16bppRgb565);
+
+            int pixelsCurrent = 0;
+            int pixelsTotal = Width * Height;
+            int pixelColor;
+
+            // Two ways re symbol-by-symbol, or use regex. What faster?
+            // Read from symbos "{", ignore tabs and spaces, read to "}". Use "," as separator.
+            // Use regex and search pattern "0x([0-9a-fA-F]{2}),"
+            foreach (Match m in Regex.Matches(Code, @"0x([0-9a-fA-F]{2}),"))
+            {
+                pixelColor = int.Parse(m.Groups[1].Value, System.Globalization.NumberStyles.HexNumber);
+                result.SetPixel(x, y, Color.FromArgb((pixelColor & 0xE0), (pixelColor & 0x1C) << 3, (pixelColor & 0x3) << 6));
+                
+                x++;
+                if (x == Width)
+                {
+                    x = 0;
+                    y++;
+                    if (y == Height)
+                    {
+                        break;  // All done. Stop conversion.
+                    }
+                }
+                pixelsCurrent++;
+
+                bgWork.ReportProgress((int)((double)pixelsCurrent / (double)pixelsTotal * 100));
+            }
+
+            return result;
+        }
+#endregion
+        
+        private void CodeToImage(object sender, DoWorkEventArgs e)
+        {
+            switch (e.Argument)
+            {
+                case TransformColorFormats.RGB332:
+                    e.Result = GenImageFromCode_RGB332();
+                    break;
+                default:
+                    MessageBox.Show("Sorry, unsupported.");
+                    e.Result = OriginalImage;
                     break;
             }
         }
@@ -247,13 +367,19 @@ namespace Image2Bitmap
         private void ConvertDone(object sender, RunWorkerCompletedEventArgs e)
         {
             convertProgress.Value = 100;
-            GeneratedCode.Text = (String)e.Result;
-            tabBox.SelectedIndex = 1;   // Open "code" tab
-
-            //bgWork.DoWork -= ConvertImage;
-            //bgWork.ProgressChanged -= BgConvertProgress;
-            //bgWork.RunWorkerCompleted -= ConvertDone;
-
+            switch (tabBox.SelectedIndex)
+            {
+                case 0:
+                    GeneratedCode.Text = (String)e.Result;
+                    tabBox.SelectedIndex = 1;
+                    break;
+                case 1:
+                    imageBox.Image = (Image)e.Result;
+                    tabBox.SelectedIndex = 0;
+                    break;
+                default:
+                    break;
+            }
             btn_Convert.Enabled = true;
         }
 
@@ -261,7 +387,29 @@ namespace Image2Bitmap
         {
             convertProgress.Value = 0;
             btn_Convert.Enabled = false;
-            bgWork.RunWorkerAsync(selBox_Format.SelectedItem);
+
+            switch (tabBox.SelectedIndex)
+            {
+                default:
+                case 0: // Image -> Code
+                    bgWork = new BackgroundWorker();
+                    bgWork.WorkerReportsProgress = true;
+                    bgWork.DoWork += new DoWorkEventHandler(ImageToCode);
+                    bgWork.ProgressChanged += new ProgressChangedEventHandler(BgConvertProgress);
+                    bgWork.RunWorkerCompleted += new RunWorkerCompletedEventHandler(ConvertDone);
+                    bgWork.RunWorkerAsync(selBox_Format.SelectedItem);
+                    break;
+                case 1: // Code -> Image
+                    bgWork = new BackgroundWorker();
+                    bgWork.WorkerReportsProgress = true;
+                    bgWork.DoWork += new DoWorkEventHandler(CodeToImage);
+                    bgWork.ProgressChanged += new ProgressChangedEventHandler(BgConvertProgress);
+                    bgWork.RunWorkerCompleted += new RunWorkerCompletedEventHandler(ConvertDone);
+                    bgWork.RunWorkerAsync(selBox_Format.SelectedItem);
+
+                    break;
+            }
+
             /*
             while (bgWork.IsBusy)
             {
@@ -271,6 +419,17 @@ namespace Image2Bitmap
                 Application.DoEvents();
             }
             */
+        }
+        
+        private void Txt_ZoomMode_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            int mode = (int)imageBox.SizeMode;
+            mode++;
+            if (mode == sizeof(PictureBoxSizeMode))
+                mode = 0;
+
+            txt_ZoomMode.Text = "Zoom mode: " + Enum.GetName(typeof(PictureBoxSizeMode), (PictureBoxSizeMode)mode);
+            imageBox.SizeMode = (PictureBoxSizeMode)mode;
         }
     }
 }

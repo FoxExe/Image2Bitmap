@@ -29,18 +29,25 @@
         private void InitializeComponent()
         {
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.label2 = new System.Windows.Forms.Label();
+            this.label1 = new System.Windows.Forms.Label();
+            this.num_Width = new System.Windows.Forms.NumericUpDown();
+            this.num_Height = new System.Windows.Forms.NumericUpDown();
             this.btn_open = new System.Windows.Forms.Button();
             this.txt_imgSize = new System.Windows.Forms.Label();
             this.selBox_Format = new System.Windows.Forms.ComboBox();
             this.imageBox = new System.Windows.Forms.PictureBox();
             this.tabBox = new System.Windows.Forms.TabControl();
             this.page_Image = new System.Windows.Forms.TabPage();
+            this.txt_ZoomMode = new System.Windows.Forms.LinkLabel();
             this.page_Code = new System.Windows.Forms.TabPage();
             this.GeneratedCode = new System.Windows.Forms.TextBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
-            this.btn_Convert = new System.Windows.Forms.Button();
             this.convertProgress = new System.Windows.Forms.ProgressBar();
+            this.btn_Convert = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.num_Width)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.num_Height)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.imageBox)).BeginInit();
             this.tabBox.SuspendLayout();
             this.page_Image.SuspendLayout();
@@ -50,20 +57,74 @@
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.label2);
+            this.groupBox1.Controls.Add(this.label1);
+            this.groupBox1.Controls.Add(this.num_Width);
+            this.groupBox1.Controls.Add(this.num_Height);
             this.groupBox1.Controls.Add(this.btn_open);
             this.groupBox1.Controls.Add(this.txt_imgSize);
             this.groupBox1.Location = new System.Drawing.Point(12, 12);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(200, 108);
+            this.groupBox1.Size = new System.Drawing.Size(200, 135);
             this.groupBox1.TabIndex = 0;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Original image:";
+            // 
+            // label2
+            // 
+            this.label2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.label2.AutoSize = true;
+            this.label2.Location = new System.Drawing.Point(90, 76);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(41, 13);
+            this.label2.TabIndex = 8;
+            this.label2.Text = "Height:";
+            this.label2.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            // 
+            // label1
+            // 
+            this.label1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(90, 50);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(38, 13);
+            this.label1.TabIndex = 7;
+            this.label1.Text = "Width:";
+            this.label1.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            // 
+            // num_Width
+            // 
+            this.num_Width.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.num_Width.Location = new System.Drawing.Point(134, 48);
+            this.num_Width.Maximum = new decimal(new int[] {
+            10000,
+            0,
+            0,
+            0});
+            this.num_Width.Name = "num_Width";
+            this.num_Width.Size = new System.Drawing.Size(60, 20);
+            this.num_Width.TabIndex = 5;
+            this.num_Width.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
+            // 
+            // num_Height
+            // 
+            this.num_Height.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.num_Height.Location = new System.Drawing.Point(134, 74);
+            this.num_Height.Maximum = new decimal(new int[] {
+            10000,
+            0,
+            0,
+            0});
+            this.num_Height.Name = "num_Height";
+            this.num_Height.Size = new System.Drawing.Size(60, 20);
+            this.num_Height.TabIndex = 6;
+            this.num_Height.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
             // 
             // btn_open
             // 
             this.btn_open.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.btn_open.Location = new System.Drawing.Point(9, 73);
+            this.btn_open.Location = new System.Drawing.Point(9, 100);
             this.btn_open.Name = "btn_open";
             this.btn_open.Size = new System.Drawing.Size(188, 29);
             this.btn_open.TabIndex = 0;
@@ -73,13 +134,12 @@
             // 
             // txt_imgSize
             // 
-            this.txt_imgSize.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+            this.txt_imgSize.AutoSize = true;
             this.txt_imgSize.Location = new System.Drawing.Point(6, 16);
             this.txt_imgSize.Name = "txt_imgSize";
-            this.txt_imgSize.Size = new System.Drawing.Size(188, 52);
+            this.txt_imgSize.Size = new System.Drawing.Size(117, 26);
             this.txt_imgSize.TabIndex = 4;
-            this.txt_imgSize.Text = "Info:\r\nWidth:\r\nHeight:\r\nFormat:";
+            this.txt_imgSize.Text = "Open image from file\r\nOr put code for convert";
             // 
             // selBox_Format
             // 
@@ -93,6 +153,7 @@
             // 
             // imageBox
             // 
+            this.imageBox.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
             this.imageBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.imageBox.Dock = System.Windows.Forms.DockStyle.Fill;
             this.imageBox.Location = new System.Drawing.Point(3, 3);
@@ -116,6 +177,7 @@
             // 
             // page_Image
             // 
+            this.page_Image.Controls.Add(this.txt_ZoomMode);
             this.page_Image.Controls.Add(this.imageBox);
             this.page_Image.Location = new System.Drawing.Point(4, 22);
             this.page_Image.Name = "page_Image";
@@ -124,6 +186,18 @@
             this.page_Image.TabIndex = 0;
             this.page_Image.Text = "Image";
             this.page_Image.UseVisualStyleBackColor = true;
+            // 
+            // txt_ZoomMode
+            // 
+            this.txt_ZoomMode.AutoSize = true;
+            this.txt_ZoomMode.Location = new System.Drawing.Point(3, 235);
+            this.txt_ZoomMode.Name = "txt_ZoomMode";
+            this.txt_ZoomMode.Size = new System.Drawing.Size(102, 13);
+            this.txt_ZoomMode.TabIndex = 6;
+            this.txt_ZoomMode.TabStop = true;
+            this.txt_ZoomMode.Text = "Zoom mode: Normal";
+            this.txt_ZoomMode.VisitedLinkColor = System.Drawing.Color.Navy;
+            this.txt_ZoomMode.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.Txt_ZoomMode_LinkClicked);
             // 
             // page_Code
             // 
@@ -139,6 +213,7 @@
             // GeneratedCode
             // 
             this.GeneratedCode.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.GeneratedCode.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
             this.GeneratedCode.Location = new System.Drawing.Point(3, 3);
             this.GeneratedCode.Multiline = true;
             this.GeneratedCode.Name = "GeneratedCode";
@@ -149,18 +224,29 @@
             // 
             // groupBox2
             // 
+            this.groupBox2.Controls.Add(this.convertProgress);
             this.groupBox2.Controls.Add(this.btn_Convert);
             this.groupBox2.Controls.Add(this.selBox_Format);
-            this.groupBox2.Location = new System.Drawing.Point(12, 126);
+            this.groupBox2.Location = new System.Drawing.Point(12, 178);
             this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(200, 82);
+            this.groupBox2.Size = new System.Drawing.Size(200, 111);
             this.groupBox2.TabIndex = 3;
             this.groupBox2.TabStop = false;
-            this.groupBox2.Text = "Convert to:";
+            this.groupBox2.Text = "Convert from/to:";
+            // 
+            // convertProgress
+            // 
+            this.convertProgress.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.convertProgress.Location = new System.Drawing.Point(6, 81);
+            this.convertProgress.Name = "convertProgress";
+            this.convertProgress.Size = new System.Drawing.Size(188, 23);
+            this.convertProgress.Step = 1;
+            this.convertProgress.TabIndex = 4;
             // 
             // btn_Convert
             // 
-            this.btn_Convert.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            this.btn_Convert.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.btn_Convert.Location = new System.Drawing.Point(6, 46);
             this.btn_Convert.Name = "btn_Convert";
@@ -170,20 +256,11 @@
             this.btn_Convert.UseVisualStyleBackColor = true;
             this.btn_Convert.Click += new System.EventHandler(this.Btn_Convert_Click);
             // 
-            // convertProgress
-            // 
-            this.convertProgress.Location = new System.Drawing.Point(13, 215);
-            this.convertProgress.Name = "convertProgress";
-            this.convertProgress.Size = new System.Drawing.Size(199, 23);
-            this.convertProgress.Step = 1;
-            this.convertProgress.TabIndex = 4;
-            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(584, 301);
-            this.Controls.Add(this.convertProgress);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.tabBox);
             this.Controls.Add(this.groupBox1);
@@ -192,9 +269,13 @@
             this.Text = "Image2Bitmap";
             this.Load += new System.EventHandler(this.Form1_Load);
             this.groupBox1.ResumeLayout(false);
+            this.groupBox1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.num_Width)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.num_Height)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.imageBox)).EndInit();
             this.tabBox.ResumeLayout(false);
             this.page_Image.ResumeLayout(false);
+            this.page_Image.PerformLayout();
             this.page_Code.ResumeLayout(false);
             this.page_Code.PerformLayout();
             this.groupBox2.ResumeLayout(false);
@@ -216,6 +297,11 @@
         private System.Windows.Forms.GroupBox groupBox2;
         private System.Windows.Forms.Button btn_Convert;
         private System.Windows.Forms.ProgressBar convertProgress;
+        private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.NumericUpDown num_Width;
+        private System.Windows.Forms.NumericUpDown num_Height;
+        private System.Windows.Forms.LinkLabel txt_ZoomMode;
     }
 }
 
