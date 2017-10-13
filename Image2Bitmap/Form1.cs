@@ -35,6 +35,9 @@ namespace Image2Bitmap
             //selBox_Format.DataSource = Enum.GetValues(typeof(PixelFormat));
             selBox_Format.DataSource = Enum.GetValues(typeof(TransformColorFormats));
             selBox_Format.SelectedIndex = 0;
+
+            num_Width.Enabled = false;
+            num_Height.Enabled = false;
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -300,7 +303,7 @@ namespace Image2Bitmap
         }
 
         #region Code2Image
-        private Image GenImageFromCode_RGB332()
+        private Image GenImageFromCode(TransformColorFormats format)
         {
             string Code = "";
             int Width = 0, Height = 0;
@@ -321,10 +324,45 @@ namespace Image2Bitmap
             // Two ways re symbol-by-symbol, or use regex. What faster?
             // Read from symbos "{", ignore tabs and spaces, read to "}". Use "," as separator.
             // Use regex and search pattern "0x([0-9a-fA-F]{2}),"
-            foreach (Match m in Regex.Matches(Code, @"0x([0-9a-fA-F]{2}),"))
+            string regex = "";
+            switch (format)
+            {
+                case TransformColorFormats.BW1BppH:
+                case TransformColorFormats.BW1BppV:
+                case TransformColorFormats.RGB332:
+                    regex = @"0x([0-9a-fA-F]{2}),";
+                    break;
+                case TransformColorFormats.RGB565:
+                    regex = @"0x([0-9a-fA-F]{4}),";
+                    break;
+            }
+
+            foreach (Match m in Regex.Matches(Code, regex))
             {
                 pixelColor = int.Parse(m.Groups[1].Value, System.Globalization.NumberStyles.HexNumber);
-                result.SetPixel(x, y, Color.FromArgb((pixelColor & 0xE0), (pixelColor & 0x1C) << 3, (pixelColor & 0x3) << 6));
+                switch (format)
+                {
+                    //case TransformColorFormats.BW1BppH:
+                    //    break;
+                    //case TransformColorFormats.BW1BppV:
+                    //    break;
+                    case TransformColorFormats.RGB332:  // RRRG GGBB
+                        result.SetPixel(x, y, Color.FromArgb(
+                            (pixelColor & 0xE0),
+                            (pixelColor & 0x1C) << 3,
+                            (pixelColor & 0x3) << 6)
+                        );
+                        break;
+                    case TransformColorFormats.RGB565:  // RRRR RGGG GGGB BBBB
+                        result.SetPixel(x, y, Color.FromArgb(
+                            (pixelColor & 0xF800) >> 8,
+                            (pixelColor & 0x7E0) >> 3,
+                            (pixelColor & 0x1F) << 3)
+                        );
+                        break;
+                    default:
+                        break;
+                }
                 
                 x++;
                 if (x == Width)
@@ -349,8 +387,9 @@ namespace Image2Bitmap
         {
             switch (e.Argument)
             {
+                case TransformColorFormats.RGB565:
                 case TransformColorFormats.RGB332:
-                    e.Result = GenImageFromCode_RGB332();
+                    e.Result = GenImageFromCode((TransformColorFormats)e.Argument);
                     break;
                 default:
                     MessageBox.Show("Sorry, unsupported.");
@@ -425,11 +464,24 @@ namespace Image2Bitmap
         {
             int mode = (int)imageBox.SizeMode;
             mode++;
-            if (mode == sizeof(PictureBoxSizeMode))
+            if (mode == sizeof(PictureBoxSizeMode) + 1)
                 mode = 0;
 
             txt_ZoomMode.Text = "Zoom mode: " + Enum.GetName(typeof(PictureBoxSizeMode), (PictureBoxSizeMode)mode);
             imageBox.SizeMode = (PictureBoxSizeMode)mode;
+        }
+
+        private void tabBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (tabBox.SelectedIndex == 1)  // Show size boxes only on "Code" tab
+            {
+                num_Width.Enabled = true;
+                num_Height.Enabled = true;
+            } else
+            {
+                num_Width.Enabled = false;
+                num_Height.Enabled = false;
+            }
         }
     }
 }

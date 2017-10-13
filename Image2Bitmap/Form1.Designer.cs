@@ -174,6 +174,7 @@
             this.tabBox.SelectedIndex = 0;
             this.tabBox.Size = new System.Drawing.Size(354, 277);
             this.tabBox.TabIndex = 3;
+            this.tabBox.SelectedIndexChanged += new System.EventHandler(this.tabBox_SelectedIndexChanged);
             // 
             // page_Image
             // 
@@ -189,6 +190,7 @@
             // 
             // txt_ZoomMode
             // 
+            this.txt_ZoomMode.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.txt_ZoomMode.AutoSize = true;
             this.txt_ZoomMode.Location = new System.Drawing.Point(3, 235);
             this.txt_ZoomMode.Name = "txt_ZoomMode";
