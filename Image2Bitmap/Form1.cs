@@ -233,7 +233,7 @@ namespace Image2Bitmap
 
         private String GenDrawCode_RGB565(Image image)
         {
-            String result = "uint8_t image = {" + Environment.NewLine + "\t";
+            String result = "uint16_t image = {" + Environment.NewLine + "\t";
 
             using (Bitmap bmp = new Bitmap(image))
             {
