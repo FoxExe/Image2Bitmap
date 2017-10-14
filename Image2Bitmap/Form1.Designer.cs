@@ -159,6 +159,7 @@
             this.imageBox.Location = new System.Drawing.Point(3, 3);
             this.imageBox.Name = "imageBox";
             this.imageBox.Size = new System.Drawing.Size(340, 245);
+            this.imageBox.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.imageBox.TabIndex = 1;
             this.imageBox.TabStop = false;
             // 
@@ -194,10 +195,10 @@
             this.txt_ZoomMode.AutoSize = true;
             this.txt_ZoomMode.Location = new System.Drawing.Point(3, 235);
             this.txt_ZoomMode.Name = "txt_ZoomMode";
-            this.txt_ZoomMode.Size = new System.Drawing.Size(102, 13);
+            this.txt_ZoomMode.Size = new System.Drawing.Size(96, 13);
             this.txt_ZoomMode.TabIndex = 6;
             this.txt_ZoomMode.TabStop = true;
-            this.txt_ZoomMode.Text = "Zoom mode: Normal";
+            this.txt_ZoomMode.Text = "Zoom mode: Zoom";
             this.txt_ZoomMode.VisitedLinkColor = System.Drawing.Color.Navy;
             this.txt_ZoomMode.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.Txt_ZoomMode_LinkClicked);
             // 
