@@ -180,104 +180,88 @@ namespace Image2Bitmap
             result += Environment.NewLine + "};";
             return result;
         }
-
-        private String GenDrawCode_RGB332(Image image)
+        
+        private string GenCodeFromImage(TransformColorFormats format)
         {
-            String result = "uint8_t image = {" + Environment.NewLine + "\t";
+            StringBuilder result = new StringBuilder();
+            string codeFormat = "";
+            int appendSize = 0;
+            int Width = 0, Height = 0;
+            Image image = null;
 
-            using (Bitmap bmp = new Bitmap(image))
+            this.Invoke(new MethodInvoker(delegate {
+                image = imageBox.Image;
+                Width = (int)num_Width.Value;
+                Height = (int)num_Height.Value;
+            }));
+
+            switch (format)
             {
-                int x_step = 0;
-                Color pixelColor;
-
-                // 6 = size of "0x12, ", 16 - every 16 lines we add newline and tab
-                StringBuilder str = new StringBuilder((bmp.Width * bmp.Height * 6) + (bmp.Width * bmp.Height / 16 * (Environment.NewLine.Length + 1)));
-
-                int pixelsTotal = bmp.Width * bmp.Height;
-                int pixelsCurrent = 0;
-
-                for (int y = 0; y < bmp.Height; y++)
-                {
-                    for (int x = 0; x < bmp.Width; x++)
-                    {
-                        pixelColor = bmp.GetPixel(x, y);
-                        // byte = 8 bit per color
-                        // RRRG GGBB
-                        int ColorByte =
-                            (pixelColor.R & 0xE0) |
-                            (pixelColor.G & 0xE0) >> 3 |
-                            (pixelColor.B & 0xC0) >> 6;
-
-                        //result += "0x" + ColorByte.ToString("X2") + ", ";
-                        str.AppendFormat("0x{0:x2}, ", ColorByte);
-
-                        pixelsCurrent++;
-
-                        x_step++;
-                        if (x_step == 16)
-                        {
-                            x_step = 0;
-                            //result += Environment.NewLine + "\t";
-                            str.Append(Environment.NewLine + "\t");
-                        }
-
-                        bgWork.ReportProgress((int)((double)pixelsCurrent / (double)pixelsTotal * 100));
-                    }
-                }
-                result += str.ToString();
+                case TransformColorFormats.RGB332:
+                    result.Append("uint8_t");
+                    codeFormat = "0x{0:x2}, ";
+                    appendSize = 6; // "0xAB, "
+                    break;
+                case TransformColorFormats.RGB565:
+                    result.Append("uint16_t");
+                    codeFormat = "0x{0:x4}, ";
+                    appendSize = 8; // "0xABCD, "
+                    break;
             }
-            result += Environment.NewLine + "};";
-            return result;
-        }
-
-
-        private String GenDrawCode_RGB565(Image image)
-        {
-            String result = "uint16_t image = {" + Environment.NewLine + "\t";
-
-            using (Bitmap bmp = new Bitmap(image))
-            {
-                int x_step = 0;
-                Color pixelColor;
-
-                int pixelsTotal = bmp.Width * bmp.Height;
-                int pixelsCurrent = 0;
-
-                // 8 = size of "0x1234, ", 16 - every 16 lines we add newline and tab
-                StringBuilder str = new StringBuilder((bmp.Width * bmp.Height * 8) + (bmp.Width * bmp.Height / 16 * (Environment.NewLine.Length + 1)));
-
-                for (int y = 0; y < bmp.Height; y++)
-                {
-                    for (int x = 0; x < bmp.Width; x++)
-                    {
-                        pixelColor = bmp.GetPixel(x, y);
-                        // byte = 16 bit per color
-                        // RRRR RGGG GGGB BBBB
-                        int ColorByte = (pixelColor.R & 0xF8) << 8 |
-                            (pixelColor.G & 0xFC) << 3 |
-                            (pixelColor.B & 0xF8) >> 3;
-
-                        str.AppendFormat("0x{0:x4}, ", ColorByte);
-                        //result += "0x" + ColorByte.ToString("X4") + ", ";
-                        pixelsCurrent++;
-
-                        x_step++;
-                        if (x_step == 16)
-                        {
-                            x_step = 0;
-                            //result += Environment.NewLine + "\t";
-                            str.Append(Environment.NewLine + "\t");
-                        }
-
-                        bgWork.ReportProgress((int)((double)pixelsCurrent / (double)pixelsTotal * 100));
-                    }
-                }
-                result += str.ToString();
-            }
+            result.Append(" image = {" + Environment.NewLine + "\t");
             
-            result += Environment.NewLine + "};";
-            return result;
+            using (Bitmap bmp = new Bitmap(image, Width, Height))
+            {
+                int rowPos = 0;
+                Color pixelColor;
+
+                int pixelsTotal = bmp.Width * bmp.Height;
+                int pixelsCurrent = 0;
+                int ColorByte = 0;
+
+                for (int y = 0; y < bmp.Height; y++)
+                {
+                    for (int x = 0; x < bmp.Width; x++)
+                    {
+                        pixelColor = bmp.GetPixel(x, y);
+
+                        switch (format)
+                        {
+                            case TransformColorFormats.RGB332:
+                                ColorByte =
+                                    (pixelColor.R & 0xE0) |
+                                    (pixelColor.G & 0xE0) >> 3 |
+                                    (pixelColor.B & 0xC0) >> 6;
+                                break;
+                            case TransformColorFormats.RGB565:
+                                // byte = 16 bit per color
+                                // RRRR RGGG GGGB BBBB
+                                ColorByte =
+                                    (pixelColor.R & 0xF8) << 8 |
+                                    (pixelColor.G & 0xFC) << 3 |
+                                    (pixelColor.B & 0xF8) >> 3;
+                                break;
+                        }
+
+                        result.AppendFormat(codeFormat, ColorByte);
+                        pixelsCurrent++;
+
+                        rowPos++;
+                        if (rowPos == 16)
+                        {
+                            rowPos = 0;
+                            result.Append(Environment.NewLine + "\t");
+                        }
+
+                        bgWork.ReportProgress((int)((double)pixelsCurrent / (double)pixelsTotal * 100));
+                    }
+                }
+            }
+
+            result.Append(Environment.NewLine + "};");
+            return result.ToString();
         }
+
         #endregion
 
         private void ImageToCode(object sender, DoWorkEventArgs e)
@@ -291,11 +275,13 @@ namespace Image2Bitmap
                     e.Result = GenDrawCode_BW1BbppV(OriginalImage);
                     break;
                 case TransformColorFormats.RGB332:
-                    e.Result = GenDrawCode_RGB332(OriginalImage);
-                    break;
                 case TransformColorFormats.RGB565:
-                    e.Result = GenDrawCode_RGB565(OriginalImage);
+                    e.Result = GenCodeFromImage((TransformColorFormats)e.Argument);
+                    //e.Result = GenDrawCode_RGB332(OriginalImage);
                     break;
+                //case TransformColorFormats.RGB565:
+                    //e.Result = GenDrawCode_RGB565(OriginalImage);
+                    //break;
                 default:
                     MessageBox.Show("Sorry, unsupported.");
                     break;
@@ -405,6 +391,7 @@ namespace Image2Bitmap
 
         private void ConvertDone(object sender, RunWorkerCompletedEventArgs e)
         {
+            GC.Collect();
             convertProgress.Value = 100;
             switch (tabBox.SelectedIndex)
             {
@@ -420,6 +407,7 @@ namespace Image2Bitmap
                     break;
             }
             btn_Convert.Enabled = true;
+            GC.Collect();
         }
 
         private void Btn_Convert_Click(object sender, EventArgs e)
@@ -449,7 +437,6 @@ namespace Image2Bitmap
                     break;
             }
 
-            /*
             while (bgWork.IsBusy)
             {
                 convertProgress.Increment(1);
@@ -457,7 +444,6 @@ namespace Image2Bitmap
                 // responsive during the asynchronous operation.
                 Application.DoEvents();
             }
-            */
         }
         
         private void Txt_ZoomMode_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
