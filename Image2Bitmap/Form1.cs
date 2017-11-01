@@ -102,7 +102,7 @@ namespace Image2Bitmap
 #endregion
 
 #region Image2Code
-        private String CodeFromImage_1bpp(Image image, bool horisontal = false)
+        private String ImageToCode_1bpp(Image image, bool horisontal = false)
         {
             String result = "uint8_t image = {" + Environment.NewLine + "\t";
             int addW = 0;
@@ -139,7 +139,7 @@ namespace Image2Bitmap
                     {
                         for (int x = 0; x < bmp.Width; x++)
                         {
-                            for (int tmpY = 0; tmpY < ((horisontal)? 1 : 8); tmpY++)
+                            for (int tmpY = 7; tmpY >= ((horisontal)? 7 : 0); tmpY--)
                             {
                                 pixelColor = bmp.GetPixel(x, ((horisontal)? y : y + tmpY));
 
@@ -176,7 +176,7 @@ namespace Image2Bitmap
             return result;
         }
         
-        private string CodeFromImage(TransformColorFormats format)
+        private string ImageToCode(TransformColorFormats format)
         {
             StringBuilder result = new StringBuilder();
             string codeFormat = "";
@@ -270,15 +270,15 @@ namespace Image2Bitmap
             switch (e.Argument)
             {
                 case TransformColorFormats.Mono_1bpp_H:
-                    e.Result = CodeFromImage_1bpp(imageBox.Image, true);
+                    e.Result = ImageToCode_1bpp(imageBox.Image, true);
                     break;
                 case TransformColorFormats.Mono_1bpp_V:
-                    e.Result = CodeFromImage_1bpp(imageBox.Image, false);
+                    e.Result = ImageToCode_1bpp(imageBox.Image, false);
                     break;
                 case TransformColorFormats.RGB_332:
                 case TransformColorFormats.RGB_444:
                 case TransformColorFormats.RGB_565:
-                    e.Result = CodeFromImage((TransformColorFormats)e.Argument);
+                    e.Result = ImageToCode((TransformColorFormats)e.Argument);
                     break;
                 default:
                     MessageBox.Show("Sorry, unsupported.");
@@ -361,7 +361,7 @@ namespace Image2Bitmap
                     case TransformColorFormats.Mono_1bpp_V:
                         for (int offset = 7; offset >= 0; offset--)
                         {
-                            result.SetPixel(x, y + (-offset + 7), ((pixelColor & (1 << offset)) > 0) ? Color.Black : Color.White);
+                            result.SetPixel(x, y + offset, ((pixelColor & (1 << offset)) > 0) ? Color.Black : Color.White);
                         }
                         break;
                     case TransformColorFormats.RGB_332:  // RRRG GGBB
