@@ -38,25 +38,27 @@
             this.selBox_Format = new System.Windows.Forms.ComboBox();
             this.tabBox = new System.Windows.Forms.TabControl();
             this.page_Image = new System.Windows.Forms.TabPage();
+            this.txt_ZoomMode = new System.Windows.Forms.LinkLabel();
+            this.imageBox = new System.Windows.Forms.PictureBox();
             this.page_Code = new System.Windows.Forms.TabPage();
             this.GeneratedCode = new System.Windows.Forms.TextBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.convertProgress = new System.Windows.Forms.ProgressBar();
             this.btn_Convert = new System.Windows.Forms.Button();
-            this.imageBox = new System.Windows.Forms.PictureBox();
-            this.txt_ZoomMode = new System.Windows.Forms.LinkLabel();
+            this.btn_Save = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.num_Width)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.num_Height)).BeginInit();
             this.tabBox.SuspendLayout();
             this.page_Image.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.imageBox)).BeginInit();
             this.page_Code.SuspendLayout();
             this.groupBox2.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.imageBox)).BeginInit();
             this.SuspendLayout();
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.btn_Save);
             this.groupBox1.Controls.Add(this.label2);
             this.groupBox1.Controls.Add(this.label1);
             this.groupBox1.Controls.Add(this.num_Width);
@@ -126,7 +128,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.btn_open.Location = new System.Drawing.Point(9, 100);
             this.btn_open.Name = "btn_open";
-            this.btn_open.Size = new System.Drawing.Size(188, 29);
+            this.btn_open.Size = new System.Drawing.Size(91, 29);
             this.btn_open.TabIndex = 0;
             this.btn_open.Text = "Open image";
             this.btn_open.UseVisualStyleBackColor = true;
@@ -177,6 +179,30 @@
             this.page_Image.TabIndex = 0;
             this.page_Image.Text = "Image";
             this.page_Image.UseVisualStyleBackColor = true;
+            // 
+            // txt_ZoomMode
+            // 
+            this.txt_ZoomMode.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.txt_ZoomMode.AutoSize = true;
+            this.txt_ZoomMode.Location = new System.Drawing.Point(-3, 235);
+            this.txt_ZoomMode.Name = "txt_ZoomMode";
+            this.txt_ZoomMode.Size = new System.Drawing.Size(96, 13);
+            this.txt_ZoomMode.TabIndex = 6;
+            this.txt_ZoomMode.TabStop = true;
+            this.txt_ZoomMode.Text = "Zoom mode: Zoom";
+            this.txt_ZoomMode.VisitedLinkColor = System.Drawing.Color.Navy;
+            this.txt_ZoomMode.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.Txt_ZoomMode_LinkClicked);
+            // 
+            // imageBox
+            // 
+            this.imageBox.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
+            this.imageBox.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.imageBox.Location = new System.Drawing.Point(3, 3);
+            this.imageBox.Name = "imageBox";
+            this.imageBox.Size = new System.Drawing.Size(340, 245);
+            this.imageBox.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
+            this.imageBox.TabIndex = 1;
+            this.imageBox.TabStop = false;
             // 
             // page_Code
             // 
@@ -235,29 +261,17 @@
             this.btn_Convert.UseVisualStyleBackColor = true;
             this.btn_Convert.Click += new System.EventHandler(this.Btn_Convert_Click);
             // 
-            // imageBox
+            // btn_Save
             // 
-            this.imageBox.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
-            this.imageBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.imageBox.Location = new System.Drawing.Point(3, 3);
-            this.imageBox.Name = "imageBox";
-            this.imageBox.Size = new System.Drawing.Size(340, 245);
-            this.imageBox.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
-            this.imageBox.TabIndex = 1;
-            this.imageBox.TabStop = false;
-            // 
-            // txt_ZoomMode
-            // 
-            this.txt_ZoomMode.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.txt_ZoomMode.AutoSize = true;
-            this.txt_ZoomMode.Location = new System.Drawing.Point(-3, 235);
-            this.txt_ZoomMode.Name = "txt_ZoomMode";
-            this.txt_ZoomMode.Size = new System.Drawing.Size(96, 13);
-            this.txt_ZoomMode.TabIndex = 6;
-            this.txt_ZoomMode.TabStop = true;
-            this.txt_ZoomMode.Text = "Zoom mode: Zoom";
-            this.txt_ZoomMode.VisitedLinkColor = System.Drawing.Color.Navy;
-            this.txt_ZoomMode.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.Txt_ZoomMode_LinkClicked);
+            this.btn_Save.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.btn_Save.Location = new System.Drawing.Point(103, 100);
+            this.btn_Save.Name = "btn_Save";
+            this.btn_Save.Size = new System.Drawing.Size(91, 29);
+            this.btn_Save.TabIndex = 9;
+            this.btn_Save.Text = "Save image";
+            this.btn_Save.UseVisualStyleBackColor = true;
+            this.btn_Save.Click += new System.EventHandler(this.btn_Save_Click);
             // 
             // Form1
             // 
@@ -278,10 +292,10 @@
             this.tabBox.ResumeLayout(false);
             this.page_Image.ResumeLayout(false);
             this.page_Image.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.imageBox)).EndInit();
             this.page_Code.ResumeLayout(false);
             this.page_Code.PerformLayout();
             this.groupBox2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.imageBox)).EndInit();
             this.ResumeLayout(false);
 
         }
@@ -305,6 +319,7 @@
         private System.Windows.Forms.NumericUpDown num_Height;
         private System.Windows.Forms.LinkLabel txt_ZoomMode;
         private System.Windows.Forms.PictureBox imageBox;
+        private System.Windows.Forms.Button btn_Save;
     }
 }
 

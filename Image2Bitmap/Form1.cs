@@ -30,6 +30,8 @@ namespace Image2Bitmap
         {
             InitializeComponent();
 
+            btn_Save.Enabled = false;
+
             //selBox_Format.DataSource = Enum.GetValues(typeof(PixelFormat));
             selBox_Format.DataSource = Enum.GetValues(typeof(TransformColorFormats));
             selBox_Format.SelectedIndex = 0;
@@ -47,7 +49,7 @@ namespace Image2Bitmap
         {
             OpenFileDialog openFile = new OpenFileDialog();
             openFile.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            openFile.Filter = "Images (*.jpg, *.jpeg, *.png, *.bmp)|*.jpg;*.jpeg;*.png;*.bmp";
+            openFile.Filter = "Images|*.jpg;*.jpeg;*.png;*.bmp";
             openFile.RestoreDirectory = true;
 
             if (openFile.ShowDialog() == DialogResult.OK)
@@ -422,6 +424,7 @@ namespace Image2Bitmap
                     break;
             }
             btn_Convert.Enabled = true;
+            btn_Save.Enabled = true;
             GC.Collect();
         }
 
@@ -493,6 +496,43 @@ namespace Image2Bitmap
             {
                 num_Width.Enabled = false;
                 num_Height.Enabled = false;
+            }
+        }
+        
+        private void btn_Save_Click(object sender, EventArgs e)
+        {
+            SaveFileDialog sfd = new SaveFileDialog();
+            sfd.Filter = "JPEG|*.jpg;*.jpeg;|PNG|*.png|BMP|*.bmp";
+
+            if (sfd.ShowDialog() == DialogResult.OK)
+            {
+                string ext = Path.GetExtension(sfd.FileName);
+
+                switch (ext)
+                {
+                    case ".jpg":
+                    case ".jpeg":
+                        EncoderParameters encParams = new EncoderParameters(1);
+                        encParams.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 90L); // 90%
+
+                        ImageCodecInfo ici = null;
+                        foreach (ImageCodecInfo codec in ImageCodecInfo.GetImageEncoders())
+                            if (codec.MimeType == "image/jpeg")
+                                ici = codec;
+                        
+                        imageBox.Image.Save(sfd.FileName, ici, encParams);
+
+                        //imageBox.Image.Save(sfd.FileName, ImageFormat.Jpeg);
+                        break;
+                    case ".png":
+                        imageBox.Image.Save(sfd.FileName, ImageFormat.Png);
+                        break;
+                    case ".bmp":
+                        imageBox.Image.Save(sfd.FileName, ImageFormat.Bmp);
+                        break;
+                    default:
+                        return;
+                }
             }
         }
     }
