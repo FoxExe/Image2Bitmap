@@ -76,116 +76,114 @@ namespace Image2Bitmap
                 }
             }
         }
+#region Color code conversion
+        private Color color_from332(int pixel)
+        {
+            // Format: RRRG GGBB (Hex) 8*8*4=256 colors
+            // 1110 0000 = 0xE0
+            // 0001 1100 = 0x1C
+            // 0000 0011 = 0x03
+            return Color.FromArgb((pixel & 0xE0), (pixel & 0x1C) << 3, (pixel & 0x3) << 6);
+        }
+
+        private Color color_from444(int pixel)
+        {
+            // Format: 0000 RRRR GGGG BBBB, 16*16*16=4096 colors
+            // 0000 1111 0000 0000 = 0x0F00
+            // 0000 0000 1111 0000 = 0x00F0
+            // 0000 0000 0000 1111 = 0x000F
+            return Color.FromArgb((pixel & 0x0F00) >> 4, (pixel & 0x00F0), (pixel & 0x000F) << 4);
+        }
+
+        private Color color_from556(int pixel)
+        {
+            // Format: RRRR RGGG GGGB BBBB (Hex) 32*32*64=65536 colors
+            // 1111 1000 0000 0000 = 0xF800
+            // 0000 0111 1110 0000 = 0x07E0
+            // 0000 0000 0001 1111 = 0x001F
+            return Color.FromArgb((pixel & 0xF800) >> 8, (pixel & 0x7E0) >> 3, (pixel & 0x1F) << 3);
+        }
+#endregion
 
 #region Image2Code
-        private String GenDrawCode_BW1BbppH(Image image)
+        private String CodeFromImage_1bpp(Image image, bool horisontal = false)
         {
             String result = "uint8_t image = {" + Environment.NewLine + "\t";
-            int correction = image.Width % 8;
-            if (correction > 0)
-                correction = -correction + 8;
+            int addW = 0;
+            int addH = 0;
+            if (horisontal)
+            {
+                // Horisontal
+                addW = image.Width % 8;
+                if (addW > 0)
+                    addW = -addW + 8;
+            } else
+            {
+                // Vertical
+                addH = image.Height % 8;
+                if (addH > 0)
+                    addH = -addH + 8;
+            }
 
-            using (Bitmap bmp = new Bitmap(image.Width + correction, image.Height))
+            using (Bitmap bmp = new Bitmap(image.Width + addW, image.Height + addH))
             {
                 using (Graphics canvas = Graphics.FromImage(bmp))
                 {
                     canvas.Clear(Color.White);
-                    canvas.DrawImage(image, 0, 0);
+                    canvas.DrawImage(image, 0, 0, image.Width, image.Height);
                     
                     int x_step = 0;
                     int pixelsTotal = bmp.Width * bmp.Height;
                     int pixelsCurrent = 0;
+                    int bitInBlock = 7;
+                    int ColorByte = 0;
+                    Color pixelColor;
 
                     for (int y = 0; y < bmp.Height; y++)
                     {
-                        for (int block = 0; block < bmp.Width / 8; block++)
-                        {
-                            int ColorByte = 0;
-
-                            for (int bitInBlock = 7; bitInBlock >= 0; bitInBlock--)
-                            {
-                                Color pixelColor = bmp.GetPixel((block * 8 + 7 - bitInBlock), y);
-                                if (pixelColor.R > 248 || pixelColor.G > 248 || pixelColor.B > 248)
-                                    ColorByte &= ~(1 << bitInBlock);
-                                else
-                                    ColorByte |= 1 << bitInBlock;
-                                pixelsCurrent++;    // For progress bar
-                            }
-                            result += "0x" + ColorByte.ToString("X2") + ", ";
-                            x_step++;
-                            if (x_step == 16)
-                            {
-                                x_step = 0;
-                                result += Environment.NewLine + "\t";
-                            }
-
-                            bgWork.ReportProgress((int)((double)pixelsCurrent / (double)pixelsTotal * 100));
-                        }
-                    }
-                }
-            }
-
-            result += Environment.NewLine + "};";
-            return result;
-        }
-        
-        private String GenDrawCode_BW1BbppV(Image image)
-        {
-            String result = "uint8_t image = {" + Environment.NewLine + "\t";
-            int correction = image.Height % 8;
-            if (correction > 0)
-                correction = -correction + 8;
-
-            using (Bitmap bmp = new Bitmap(image.Width, image.Height + correction))
-            {
-                using (Graphics canvas = Graphics.FromImage(bmp))
-                {
-                    canvas.Clear(Color.White);
-                    canvas.DrawImage(image, 0, 0);
-
-                    int x_step = 0;
-
-                    int pixelsTotal = bmp.Width * bmp.Height;
-                    int pixelsCurrent = 0;
-
-                    for (int vBlock = 0; vBlock < bmp.Height / 8; vBlock++)
-                    {
                         for (int x = 0; x < bmp.Width; x++)
                         {
-                            int ColorByte = 0;
-                            //result += "B";    // Show in byte format: B11110000 (0xf0)
-                            for (int bitInBlock = 0; bitInBlock < 8; bitInBlock++)
+                            for (int tmpY = 0; tmpY < ((horisontal)? 1 : 8); tmpY++)
                             {
-                                Color pixelColor = bmp.GetPixel(x, vBlock * 8 + bitInBlock);
-                                if (pixelColor.R > 248 || pixelColor.G > 248 || pixelColor.B > 248)
-                                    ColorByte &= ~(1 << bitInBlock);    // result += "0";
-                                else
-                                    ColorByte |= 1 << bitInBlock;   // result += "1";
-                                pixelsCurrent++;
-                            }
-                            result += "0x" + ColorByte.ToString("X2") + ", ";
-                            
-                            x_step++;
-                            if (x_step == 16)
-                            {
-                                x_step = 0;
-                                result += Environment.NewLine + "\t";
-                            }
+                                pixelColor = bmp.GetPixel(x, ((horisontal)? y : y + tmpY));
 
-                            bgWork.ReportProgress((int)((double)pixelsCurrent / (double)pixelsTotal * 100));
+                                if (pixelColor.R > 248 || pixelColor.G > 248 || pixelColor.B > 248)
+                                    ColorByte &= ~(1 << bitInBlock);    // White
+                                else
+                                    ColorByte |= 1 << bitInBlock;       // Black
+
+                                if (bitInBlock == 0)
+                                {
+                                    result += "0x" + ColorByte.ToString("X2") + ", ";
+                                    x_step++;
+                                    if (x_step == 16)
+                                    {
+                                        x_step = 0;
+                                        result += Environment.NewLine + "\t";
+                                    }
+                                    ColorByte = 0;
+                                    bitInBlock = 7;
+                                }
+                                else
+                                    bitInBlock--;
+
+                                bgWork.ReportProgress((int)((double)pixelsCurrent++ / (double)pixelsTotal * 100));
+                            }
                         }
+                        if (!horisontal)
+                            y += 7;
                     }
                 }
             }
+
             result += Environment.NewLine + "};";
             return result;
         }
         
-        private string GenCodeFromImage(TransformColorFormats format)
+        private string CodeFromImage(TransformColorFormats format)
         {
             StringBuilder result = new StringBuilder();
             string codeFormat = "";
-            int appendSize = 0;
             int Width = 0, Height = 0;
             Image image = null;
 
@@ -200,12 +198,10 @@ namespace Image2Bitmap
                 case TransformColorFormats.RGB332:
                     result.Append("uint8_t");
                     codeFormat = "0x{0:x2}, ";
-                    appendSize = 6; // "0xAB, "
                     break;
                 case TransformColorFormats.RGB565:
                     result.Append("uint16_t");
                     codeFormat = "0x{0:x4}, ";
-                    appendSize = 8; // "0xABCD, "
                     break;
             }
             result.Append(" image = {" + Environment.NewLine + "\t");
@@ -269,14 +265,14 @@ namespace Image2Bitmap
             switch (e.Argument)
             {
                 case TransformColorFormats.BW1BppH:
-                    e.Result = GenDrawCode_BW1BbppH(OriginalImage);
+                    e.Result = CodeFromImage_1bpp(OriginalImage, true);
                     break;
                 case TransformColorFormats.BW1BppV:
-                    e.Result = GenDrawCode_BW1BbppV(OriginalImage);
+                    e.Result = CodeFromImage_1bpp(OriginalImage, false);
                     break;
                 case TransformColorFormats.RGB332:
                 case TransformColorFormats.RGB565:
-                    e.Result = GenCodeFromImage((TransformColorFormats)e.Argument);
+                    e.Result = CodeFromImage((TransformColorFormats)e.Argument);
                     //e.Result = GenDrawCode_RGB332(OriginalImage);
                     break;
                 //case TransformColorFormats.RGB565:
@@ -289,8 +285,11 @@ namespace Image2Bitmap
         }
 
         #region Code2Image
-        private Image GenImageFromCode(TransformColorFormats format)
+
+        private void CodeToImage(object sender, DoWorkEventArgs e)
         {
+            TransformColorFormats format = (TransformColorFormats)e.Argument;
+
             string Code = "";
             int Width = 0, Height = 0;
             int x = 0, y = 0;
@@ -301,7 +300,7 @@ namespace Image2Bitmap
                 Code = GeneratedCode.Text;
             }));
 
-            Bitmap result = new Bitmap(Width, Height, PixelFormat.Format16bppRgb565);
+            Bitmap result = new Bitmap(Width, Height);
 
             int pixelsCurrent = 0;
             int pixelsTotal = Width * Height;
@@ -316,45 +315,50 @@ namespace Image2Bitmap
                 case TransformColorFormats.BW1BppH:
                 case TransformColorFormats.BW1BppV:
                 case TransformColorFormats.RGB332:
-                    regex = @"0x([0-9a-fA-F]{2}),";
+                    regex = @"0x([0-9a-fA-F]{2}),"; // 0xAB (one byte)
                     break;
                 case TransformColorFormats.RGB565:
-                    regex = @"0x([0-9a-fA-F]{4}),";
+                    regex = @"0x([0-9a-fA-F]{4}),"; // 0xABCD (two bytes)
                     break;
             }
 
             foreach (Match m in Regex.Matches(Code, regex))
             {
                 pixelColor = int.Parse(m.Groups[1].Value, System.Globalization.NumberStyles.HexNumber);
+
                 switch (format)
                 {
-                    //case TransformColorFormats.BW1BppH:
-                    //    break;
-                    //case TransformColorFormats.BW1BppV:
-                    //    break;
+                    case TransformColorFormats.BW1BppH:
+                        for (int offset = 7; offset >= 0; offset--)
+                        {
+                            result.SetPixel(x, y, ((pixelColor & (1 << offset)) > 0) ? Color.Black : Color.White);
+                            x++;
+                        }
+                        x--;
+                        break;
+                    case TransformColorFormats.BW1BppV:
+                        for (int offset = 7; offset >= 0; offset--)
+                        {
+                            result.SetPixel(x, y + (-offset + 7), ((pixelColor & (1 << offset)) > 0) ? Color.Black : Color.White);
+                        }
+                        break;
                     case TransformColorFormats.RGB332:  // RRRG GGBB
-                        result.SetPixel(x, y, Color.FromArgb(
-                            (pixelColor & 0xE0),
-                            (pixelColor & 0x1C) << 3,
-                            (pixelColor & 0x3) << 6)
-                        );
+                        result.SetPixel(x, y, color_from332(pixelColor));
                         break;
                     case TransformColorFormats.RGB565:  // RRRR RGGG GGGB BBBB
-                        result.SetPixel(x, y, Color.FromArgb(
-                            (pixelColor & 0xF800) >> 8,
-                            (pixelColor & 0x7E0) >> 3,
-                            (pixelColor & 0x1F) << 3)
-                        );
-                        break;
-                    default:
+                        result.SetPixel(x, y, color_from556(pixelColor));
                         break;
                 }
-                
+
                 x++;
                 if (x == Width)
                 {
                     x = 0;
-                    y++;
+                    if (format == TransformColorFormats.BW1BppV)
+                        y += 8;
+                    else
+                        y += 1;
+
                     if (y == Height)
                     {
                         break;  // All done. Stop conversion.
@@ -365,24 +369,10 @@ namespace Image2Bitmap
                 bgWork.ReportProgress((int)((double)pixelsCurrent / (double)pixelsTotal * 100));
             }
 
-            return result;
+             e.Result = result;
         }
-#endregion
-        
-        private void CodeToImage(object sender, DoWorkEventArgs e)
-        {
-            switch (e.Argument)
-            {
-                case TransformColorFormats.RGB565:
-                case TransformColorFormats.RGB332:
-                    e.Result = GenImageFromCode((TransformColorFormats)e.Argument);
-                    break;
-                default:
-                    MessageBox.Show("Sorry, unsupported.");
-                    e.Result = OriginalImage;
-                    break;
-            }
-        }
+
+        #endregion
 
         private void BgConvertProgress(object sender, ProgressChangedEventArgs e)
         {
