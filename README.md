@@ -17,3 +17,4 @@ Usable for Arduino, STM32, ESP8266, RaspberryPI, OrangePI and other controllers 
 - [X] Two-way conversion (Image-to-byteArray and byteArray-to-Image)
 - [X] Zoom/crop preview
 - [ ] More formats?
+- [ ] Howto, About, Contacts and other info
