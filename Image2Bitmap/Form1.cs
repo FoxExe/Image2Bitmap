@@ -16,21 +16,19 @@ namespace Image2Bitmap
     {
         enum TransformColorFormats
         {
-            BW1BppH,
-            BW1BppV,
+            Mono_1bpp_H,
+            Mono_1bpp_V,
             //BW8Bpp,
-            RGB332,
-            //RGB444,
-            RGB565,
+            RGB_332,
+            RGB_444,
+            RGB_565,
         }
-
-        private Image OriginalImage;
+        
         private BackgroundWorker bgWork;
 
         public Form1()
         {
             InitializeComponent();
-            btn_Convert.Enabled = false;
 
             //selBox_Format.DataSource = Enum.GetValues(typeof(PixelFormat));
             selBox_Format.DataSource = Enum.GetValues(typeof(TransformColorFormats));
@@ -56,18 +54,16 @@ namespace Image2Bitmap
             {
                 try
                 {
-                    OriginalImage = Image.FromStream(openFile.OpenFile());
-                    imageBox.Image = OriginalImage;
+                    imageBox.Image = Image.FromStream(openFile.OpenFile());
                     txt_imgSize.Text = string.Format(
                         "{0}\n{1}",
                         openFile.SafeFileName,
-                        OriginalImage.PixelFormat.ToString()
+                        imageBox.Image.PixelFormat.ToString()
                     );
-                    num_Width.Value = OriginalImage.Width;
-                    num_Height.Value = OriginalImage.Height;
+                    num_Width.Value = imageBox.Image.Width;
+                    num_Height.Value = imageBox.Image.Height;
 
                     tabBox.SelectedIndex = 0;   // First tab (Image)
-                    btn_Convert.Enabled = true;
                 }
                 catch (Exception ex)
                 {
@@ -154,15 +150,15 @@ namespace Image2Bitmap
 
                                 if (bitInBlock == 0)
                                 {
-                                    result += "0x" + ColorByte.ToString("X2") + ", ";
-                                    x_step++;
                                     if (x_step == 16)
                                     {
                                         x_step = 0;
                                         result += Environment.NewLine + "\t";
                                     }
+                                    result += "0x" + ColorByte.ToString("X2") + ", ";
                                     ColorByte = 0;
                                     bitInBlock = 7;
+                                    x_step++;
                                 }
                                 else
                                     bitInBlock--;
@@ -195,11 +191,12 @@ namespace Image2Bitmap
 
             switch (format)
             {
-                case TransformColorFormats.RGB332:
+                case TransformColorFormats.RGB_332:
                     result.Append("uint8_t");
                     codeFormat = "0x{0:x2}, ";
                     break;
-                case TransformColorFormats.RGB565:
+                case TransformColorFormats.RGB_444:
+                case TransformColorFormats.RGB_565:
                     result.Append("uint16_t");
                     codeFormat = "0x{0:x4}, ";
                     break;
@@ -223,18 +220,26 @@ namespace Image2Bitmap
 
                         switch (format)
                         {
-                            case TransformColorFormats.RGB332:
+                            case TransformColorFormats.RGB_332:
                                 ColorByte =
-                                    (pixelColor.R & 0xE0) |
+                                    (pixelColor.R & 0xE0) |         // 0xE0 = 1110 0000
                                     (pixelColor.G & 0xE0) >> 3 |
-                                    (pixelColor.B & 0xC0) >> 6;
+                                    (pixelColor.B & 0xC0) >> 6;     // 0xC0 = 1100 0000
                                 break;
-                            case TransformColorFormats.RGB565:
+                            case TransformColorFormats.RGB_444:
                                 // byte = 16 bit per color
                                 // RRRR RGGG GGGB BBBB
                                 ColorByte =
-                                    (pixelColor.R & 0xF8) << 8 |
-                                    (pixelColor.G & 0xFC) << 3 |
+                                    (pixelColor.R & 0xF0) << 4 |    // 0xF0 = 1111 0000
+                                    (pixelColor.G & 0xF0) |
+                                    (pixelColor.B & 0xF0) >> 4;
+                                break;
+                            case TransformColorFormats.RGB_565:
+                                // byte = 16 bit per color
+                                // RRRR RGGG GGGB BBBB
+                                ColorByte =
+                                    (pixelColor.R & 0xF8) << 8 |    // 0xF8 = 1111 1000
+                                    (pixelColor.G & 0xFC) << 3 |    // 0xFC = 1111 1100
                                     (pixelColor.B & 0xF8) >> 3;
                                 break;
                         }
@@ -264,27 +269,24 @@ namespace Image2Bitmap
         {
             switch (e.Argument)
             {
-                case TransformColorFormats.BW1BppH:
-                    e.Result = CodeFromImage_1bpp(OriginalImage, true);
+                case TransformColorFormats.Mono_1bpp_H:
+                    e.Result = CodeFromImage_1bpp(imageBox.Image, true);
                     break;
-                case TransformColorFormats.BW1BppV:
-                    e.Result = CodeFromImage_1bpp(OriginalImage, false);
+                case TransformColorFormats.Mono_1bpp_V:
+                    e.Result = CodeFromImage_1bpp(imageBox.Image, false);
                     break;
-                case TransformColorFormats.RGB332:
-                case TransformColorFormats.RGB565:
+                case TransformColorFormats.RGB_332:
+                case TransformColorFormats.RGB_444:
+                case TransformColorFormats.RGB_565:
                     e.Result = CodeFromImage((TransformColorFormats)e.Argument);
-                    //e.Result = GenDrawCode_RGB332(OriginalImage);
                     break;
-                //case TransformColorFormats.RGB565:
-                    //e.Result = GenDrawCode_RGB565(OriginalImage);
-                    //break;
                 default:
                     MessageBox.Show("Sorry, unsupported.");
                     break;
             }
         }
 
-        #region Code2Image
+#region Code2Image
 
         private void CodeToImage(object sender, DoWorkEventArgs e)
         {
@@ -300,6 +302,25 @@ namespace Image2Bitmap
                 Code = GeneratedCode.Text;
             }));
 
+            if (Width <= 0 || Height <= 0)
+            {
+                MessageBox.Show("Error:\nThe size of image can't be zero!");
+                return;
+            }
+
+            // Some additional checks
+            if (format == TransformColorFormats.Mono_1bpp_H && Width % 8 != 0)
+            {
+                MessageBox.Show("Error:\nWidth has to be multiple 8!");
+                return;
+            }
+
+            if (format == TransformColorFormats.Mono_1bpp_V && Height % 8 != 0)
+            {
+                MessageBox.Show("Error:\nHeight has to be multiple 8!");
+                return;
+            }
+
             Bitmap result = new Bitmap(Width, Height);
 
             int pixelsCurrent = 0;
@@ -312,23 +333,24 @@ namespace Image2Bitmap
             string regex = "";
             switch (format)
             {
-                case TransformColorFormats.BW1BppH:
-                case TransformColorFormats.BW1BppV:
-                case TransformColorFormats.RGB332:
+                case TransformColorFormats.Mono_1bpp_H:
+                case TransformColorFormats.Mono_1bpp_V:
+                case TransformColorFormats.RGB_332:
                     regex = @"0x([0-9a-fA-F]{2}),"; // 0xAB (one byte)
                     break;
-                case TransformColorFormats.RGB565:
+                case TransformColorFormats.RGB_444:
+                case TransformColorFormats.RGB_565:
                     regex = @"0x([0-9a-fA-F]{4}),"; // 0xABCD (two bytes)
                     break;
             }
-
+            
             foreach (Match m in Regex.Matches(Code, regex))
             {
                 pixelColor = int.Parse(m.Groups[1].Value, System.Globalization.NumberStyles.HexNumber);
 
                 switch (format)
                 {
-                    case TransformColorFormats.BW1BppH:
+                    case TransformColorFormats.Mono_1bpp_H:
                         for (int offset = 7; offset >= 0; offset--)
                         {
                             result.SetPixel(x, y, ((pixelColor & (1 << offset)) > 0) ? Color.Black : Color.White);
@@ -336,16 +358,19 @@ namespace Image2Bitmap
                         }
                         x--;
                         break;
-                    case TransformColorFormats.BW1BppV:
+                    case TransformColorFormats.Mono_1bpp_V:
                         for (int offset = 7; offset >= 0; offset--)
                         {
                             result.SetPixel(x, y + (-offset + 7), ((pixelColor & (1 << offset)) > 0) ? Color.Black : Color.White);
                         }
                         break;
-                    case TransformColorFormats.RGB332:  // RRRG GGBB
+                    case TransformColorFormats.RGB_332:  // RRRG GGBB
                         result.SetPixel(x, y, color_from332(pixelColor));
                         break;
-                    case TransformColorFormats.RGB565:  // RRRR RGGG GGGB BBBB
+                    case TransformColorFormats.RGB_444:  // 0000 RRRR GGGG BBBB
+                        result.SetPixel(x, y, color_from444(pixelColor));
+                        break;
+                    case TransformColorFormats.RGB_565:  // RRRR RGGG GGGB BBBB
                         result.SetPixel(x, y, color_from556(pixelColor));
                         break;
                 }
@@ -354,7 +379,7 @@ namespace Image2Bitmap
                 if (x == Width)
                 {
                     x = 0;
-                    if (format == TransformColorFormats.BW1BppV)
+                    if (format == TransformColorFormats.Mono_1bpp_V)
                         y += 8;
                     else
                         y += 1;
@@ -409,6 +434,12 @@ namespace Image2Bitmap
             {
                 default:
                 case 0: // Image -> Code
+                    if (imageBox.Image.Width == 0 || imageBox.Image.Height == 0)
+                    {
+                        MessageBox.Show("Error!\nNo image loaded or unsupported image format.");
+                        btn_Convert.Enabled = true;
+                        return;
+                    }
                     bgWork = new BackgroundWorker();
                     bgWork.WorkerReportsProgress = true;
                     bgWork.DoWork += new DoWorkEventHandler(ImageToCode);
@@ -417,13 +448,18 @@ namespace Image2Bitmap
                     bgWork.RunWorkerAsync(selBox_Format.SelectedItem);
                     break;
                 case 1: // Code -> Image
+                    if (string.IsNullOrWhiteSpace(GeneratedCode.Text))
+                    {
+                        MessageBox.Show("Error!\nEnter some code in Hex format (0x1234) devided by commas.");
+                        btn_Convert.Enabled = true;
+                        return;
+                    }
                     bgWork = new BackgroundWorker();
                     bgWork.WorkerReportsProgress = true;
                     bgWork.DoWork += new DoWorkEventHandler(CodeToImage);
                     bgWork.ProgressChanged += new ProgressChangedEventHandler(BgConvertProgress);
                     bgWork.RunWorkerCompleted += new RunWorkerCompletedEventHandler(ConvertDone);
                     bgWork.RunWorkerAsync(selBox_Format.SelectedItem);
-
                     break;
             }
 
