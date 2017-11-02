@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.btn_Save = new System.Windows.Forms.Button();
             this.label2 = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
             this.num_Width = new System.Windows.Forms.NumericUpDown();
@@ -45,7 +46,6 @@
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.convertProgress = new System.Windows.Forms.ProgressBar();
             this.btn_Convert = new System.Windows.Forms.Button();
-            this.btn_Save = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.num_Width)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.num_Height)).BeginInit();
@@ -71,6 +71,18 @@
             this.groupBox1.TabIndex = 0;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Original image:";
+            // 
+            // btn_Save
+            // 
+            this.btn_Save.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.btn_Save.Location = new System.Drawing.Point(103, 100);
+            this.btn_Save.Name = "btn_Save";
+            this.btn_Save.Size = new System.Drawing.Size(91, 29);
+            this.btn_Save.TabIndex = 9;
+            this.btn_Save.Text = "Save image";
+            this.btn_Save.UseVisualStyleBackColor = true;
+            this.btn_Save.Click += new System.EventHandler(this.btn_Save_Click);
             // 
             // label2
             // 
@@ -217,9 +229,11 @@
             // 
             // GeneratedCode
             // 
+            this.GeneratedCode.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this.GeneratedCode.Dock = System.Windows.Forms.DockStyle.Fill;
             this.GeneratedCode.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
             this.GeneratedCode.Location = new System.Drawing.Point(3, 3);
+            this.GeneratedCode.MaxLength = 9999999;
             this.GeneratedCode.Multiline = true;
             this.GeneratedCode.Name = "GeneratedCode";
             this.GeneratedCode.ScrollBars = System.Windows.Forms.ScrollBars.Both;
@@ -260,18 +274,6 @@
             this.btn_Convert.Text = "Convert!";
             this.btn_Convert.UseVisualStyleBackColor = true;
             this.btn_Convert.Click += new System.EventHandler(this.Btn_Convert_Click);
-            // 
-            // btn_Save
-            // 
-            this.btn_Save.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.btn_Save.Location = new System.Drawing.Point(103, 100);
-            this.btn_Save.Name = "btn_Save";
-            this.btn_Save.Size = new System.Drawing.Size(91, 29);
-            this.btn_Save.TabIndex = 9;
-            this.btn_Save.Text = "Save image";
-            this.btn_Save.UseVisualStyleBackColor = true;
-            this.btn_Save.Click += new System.EventHandler(this.btn_Save_Click);
             // 
             // Form1
             // 

@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Image2Bitmap
@@ -165,11 +162,13 @@ namespace Image2Bitmap
                                 else
                                     bitInBlock--;
 
-                                bgWork.ReportProgress((int)((double)pixelsCurrent++ / (double)pixelsTotal * 100));
+                                
                             }
                         }
                         if (!horisontal)
                             y += 7;
+
+                        bgWork.ReportProgress((int)((double)pixelsCurrent++ / (double)pixelsTotal * 100));
                     }
                 }
             }
@@ -208,41 +207,57 @@ namespace Image2Bitmap
             using (Bitmap bmp = new Bitmap(image, Width, Height))
             {
                 int rowPos = 0;
-                Color pixelColor;
 
                 int pixelsTotal = bmp.Width * bmp.Height;
                 int pixelsCurrent = 0;
                 int ColorByte = 0;
+                
+                // ===========================================================
+                // Optimisation: Upto 5x faster than GetPixel();
+                Rectangle rect = new Rectangle(0, 0, bmp.Width, bmp.Height);
+                System.Drawing.Imaging.BitmapData bmpData =
+                    bmp.LockBits(rect, System.Drawing.Imaging.ImageLockMode.ReadWrite,
+                    bmp.PixelFormat);
+                
+                IntPtr ptr = bmpData.Scan0;
+                int bytes = bmpData.Stride * bmp.Height;    // ARGB: Width * Height * 4 (Stride = Width * 4)
+                byte[] rgbValues = new byte[bytes];
+
+                // Format BGRA (GRB+Alpha, inverted). Example: BBBBBBBB GGGGGGGG RRRRRRRR AAAAAAAA
+                System.Runtime.InteropServices.Marshal.Copy(ptr, rgbValues, 0, bytes);
+
+                int pixelByte = 0;
+                // ===========================================================
 
                 for (int y = 0; y < bmp.Height; y++)
                 {
                     for (int x = 0; x < bmp.Width; x++)
                     {
-                        pixelColor = bmp.GetPixel(x, y);
+                        pixelByte = (y * bmp.Width + x) * 4;
 
                         switch (format)
                         {
                             case TransformColorFormats.RGB_332:
-                                ColorByte =
-                                    (pixelColor.R & 0xE0) |         // 0xE0 = 1110 0000
-                                    (pixelColor.G & 0xE0) >> 3 |
-                                    (pixelColor.B & 0xC0) >> 6;     // 0xC0 = 1100 0000
+                                ColorByte = 
+                                    (rgbValues[pixelByte + 2] & 0xE0) |         // 0xE0 = 1110 0000
+                                    (rgbValues[pixelByte + 1] & 0xE0) >> 3 |
+                                    (rgbValues[pixelByte + 0] & 0xC0) >> 6;     // 0xC0 = 1100 0000
                                 break;
                             case TransformColorFormats.RGB_444:
                                 // byte = 16 bit per color
                                 // RRRR RGGG GGGB BBBB
                                 ColorByte =
-                                    (pixelColor.R & 0xF0) << 4 |    // 0xF0 = 1111 0000
-                                    (pixelColor.G & 0xF0) |
-                                    (pixelColor.B & 0xF0) >> 4;
+                                    (rgbValues[pixelByte + 2] & 0xF0) << 4 |    // 0xF0 = 1111 0000
+                                    (rgbValues[pixelByte + 1] & 0xF0) |
+                                    (rgbValues[pixelByte + 0] & 0xF0) >> 4;
                                 break;
                             case TransformColorFormats.RGB_565:
                                 // byte = 16 bit per color
                                 // RRRR RGGG GGGB BBBB
                                 ColorByte =
-                                    (pixelColor.R & 0xF8) << 8 |    // 0xF8 = 1111 1000
-                                    (pixelColor.G & 0xFC) << 3 |    // 0xFC = 1111 1100
-                                    (pixelColor.B & 0xF8) >> 3;
+                                    (rgbValues[pixelByte + 2] & 0xF8) << 8 |    // 0xF8 = 1111 1000
+                                    (rgbValues[pixelByte + 1] & 0xFC) << 3 |    // 0xFC = 1111 1100
+                                    (rgbValues[pixelByte + 0] & 0xF8) >> 3;
                                 break;
                         }
 
@@ -255,9 +270,8 @@ namespace Image2Bitmap
                             rowPos = 0;
                             result.Append(Environment.NewLine + "\t");
                         }
-
-                        bgWork.ReportProgress((int)((double)pixelsCurrent / (double)pixelsTotal * 100));
                     }
+                    bgWork.ReportProgress((int)((double)pixelsCurrent / (double)pixelsTotal * 100));
                 }
             }
 
@@ -378,6 +392,8 @@ namespace Image2Bitmap
                 }
 
                 x++;
+                pixelsCurrent++;
+
                 if (x == Width)
                 {
                     x = 0;
@@ -386,17 +402,15 @@ namespace Image2Bitmap
                     else
                         y += 1;
 
+                    bgWork.ReportProgress((int)((double)pixelsCurrent / (double)pixelsTotal * 100));
+
                     if (y == Height)
                     {
                         break;  // All done. Stop conversion.
                     }
                 }
-                pixelsCurrent++;
-
-                bgWork.ReportProgress((int)((double)pixelsCurrent / (double)pixelsTotal * 100));
             }
-
-             e.Result = result;
+            e.Result = result;
         }
 
         #endregion
@@ -464,14 +478,6 @@ namespace Image2Bitmap
                     bgWork.RunWorkerCompleted += new RunWorkerCompletedEventHandler(ConvertDone);
                     bgWork.RunWorkerAsync(selBox_Format.SelectedItem);
                     break;
-            }
-
-            while (bgWork.IsBusy)
-            {
-                convertProgress.Increment(1);
-                // Keep UI messages moving, so the form remains 
-                // responsive during the asynchronous operation.
-                Application.DoEvents();
             }
         }
         

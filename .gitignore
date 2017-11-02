@@ -1,6 +1,8 @@
 *~
 *.[oa]
-/.vs
+*.psess
+*.vsp
+*.vs
 /Debug
 /*/__vm
 /*/Debug
