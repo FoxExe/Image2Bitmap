@@ -13,9 +13,9 @@ namespace Image2Bitmap
     {
         enum TransformColorFormats
         {
-            Mono_1bpp_H,
-            Mono_1bpp_V,
-            //BW8Bpp,
+            BW_1bpp_H,  // 8 pixels in width
+            BW_1bpp_V,  // 8 pixels in height
+            BW_1bpp_C,  // Horisontal read line-by-line to byte array
             RGB_332,
             RGB_444,
             RGB_565,
@@ -98,100 +98,47 @@ namespace Image2Bitmap
             // 0000 0000 0001 1111 = 0x001F
             return Color.FromArgb((pixel & 0xF800) >> 8, (pixel & 0x7E0) >> 3, (pixel & 0x1F) << 3);
         }
-#endregion
+        #endregion
 
 #region Image2Code
-        private String ImageToCode_1bpp(Image image, bool horisontal = false)
-        {
-            String result = "uint8_t image = {" + Environment.NewLine + "\t";
-            int addW = 0;
-            int addH = 0;
-            if (horisontal)
-            {
-                // Horisontal
-                addW = image.Width % 8;
-                if (addW > 0)
-                    addW = -addW + 8;
-            } else
-            {
-                // Vertical
-                addH = image.Height % 8;
-                if (addH > 0)
-                    addH = -addH + 8;
-            }
-
-            using (Bitmap bmp = new Bitmap(image.Width + addW, image.Height + addH))
-            {
-                using (Graphics canvas = Graphics.FromImage(bmp))
-                {
-                    canvas.Clear(Color.White);
-                    canvas.DrawImage(image, 0, 0, image.Width, image.Height);
-                    
-                    int x_step = 0;
-                    int pixelsTotal = bmp.Width * bmp.Height;
-                    int pixelsCurrent = 0;
-                    int bitInBlock = 7;
-                    int ColorByte = 0;
-                    Color pixelColor;
-
-                    for (int y = 0; y < bmp.Height; y++)
-                    {
-                        for (int x = 0; x < bmp.Width; x++)
-                        {
-                            for (int tmpY = 7; tmpY >= ((horisontal)? 7 : 0); tmpY--)
-                            {
-                                pixelColor = bmp.GetPixel(x, ((horisontal)? y : y + tmpY));
-
-                                if (pixelColor.R > 248 || pixelColor.G > 248 || pixelColor.B > 248)
-                                    ColorByte &= ~(1 << bitInBlock);    // White
-                                else
-                                    ColorByte |= 1 << bitInBlock;       // Black
-
-                                if (bitInBlock == 0)
-                                {
-                                    if (x_step == 16)
-                                    {
-                                        x_step = 0;
-                                        result += Environment.NewLine + "\t";
-                                    }
-                                    result += "0x" + ColorByte.ToString("X2") + ", ";
-                                    ColorByte = 0;
-                                    bitInBlock = 7;
-                                    x_step++;
-                                }
-                                else
-                                    bitInBlock--;
-
-                                
-                            }
-                        }
-                        if (!horisontal)
-                            y += 7;
-
-                        bgWork.ReportProgress((int)((double)pixelsCurrent++ / (double)pixelsTotal * 100));
-                    }
-                }
-            }
-
-            result += Environment.NewLine + "};";
-            return result;
-        }
-        
-        private string ImageToCode(TransformColorFormats format)
+        private void ImageToCode(object sender, DoWorkEventArgs e)
         {
             StringBuilder result = new StringBuilder();
             string codeFormat = "";
             int Width = 0, Height = 0;
+            int bitInBlock = 7; // For BW/1bpp conversion
+            bool is_1bpp = false;
             Image image = null;
 
-            this.Invoke(new MethodInvoker(delegate {
+            this.Invoke(new MethodInvoker(delegate
+            {
                 image = imageBox.Image;
                 Width = (int)num_Width.Value;
                 Height = (int)num_Height.Value;
             }));
 
-            switch (format)
+            // Some additional checks
+            if ((TransformColorFormats)e.Argument == TransformColorFormats.BW_1bpp_H && Width % 8 != 0)
             {
+                MessageBox.Show("Error:\nWidth has to be multiple 8!");
+                return;
+            }
+
+            if ((TransformColorFormats)e.Argument == TransformColorFormats.BW_1bpp_V && Height % 8 != 0)
+            {
+                MessageBox.Show("Error:\nHeight has to be multiple 8!");
+                return;
+            }
+
+            switch (e.Argument)
+            {
+                case TransformColorFormats.BW_1bpp_H:
+                case TransformColorFormats.BW_1bpp_V:
+                case TransformColorFormats.BW_1bpp_C:
+                    result.Append("uint8_t");
+                    codeFormat = "0x{0:x2}, ";
+                    is_1bpp = true;
+                    break;
                 case TransformColorFormats.RGB_332:
                     result.Append("uint8_t");
                     codeFormat = "0x{0:x2}, ";
@@ -201,9 +148,13 @@ namespace Image2Bitmap
                     result.Append("uint16_t");
                     codeFormat = "0x{0:x4}, ";
                     break;
+                default:
+                    MessageBox.Show("Sorry, unsupported format");
+                    return;
             }
+
             result.Append(" image = {" + Environment.NewLine + "\t");
-            
+
             using (Bitmap bmp = new Bitmap(image, Width, Height))
             {
                 int rowPos = 0;
@@ -211,14 +162,14 @@ namespace Image2Bitmap
                 int pixelsTotal = bmp.Width * bmp.Height;
                 int pixelsCurrent = 0;
                 int ColorByte = 0;
-                
+
                 // ===========================================================
                 // Optimisation: Upto 5x faster than GetPixel();
                 Rectangle rect = new Rectangle(0, 0, bmp.Width, bmp.Height);
                 System.Drawing.Imaging.BitmapData bmpData =
                     bmp.LockBits(rect, System.Drawing.Imaging.ImageLockMode.ReadWrite,
                     bmp.PixelFormat);
-                
+
                 IntPtr ptr = bmpData.Scan0;
                 int bytes = bmpData.Stride * bmp.Height;    // ARGB: Width * Height * 4 (Stride = Width * 4)
                 byte[] rgbValues = new byte[bytes];
@@ -229,16 +180,41 @@ namespace Image2Bitmap
                 int pixelByte = 0;
                 // ===========================================================
 
+                // Read image pixel's from left to right, top to bottom (Like a book)
                 for (int y = 0; y < bmp.Height; y++)
                 {
                     for (int x = 0; x < bmp.Width; x++)
                     {
                         pixelByte = (y * bmp.Width + x) * 4;
 
-                        switch (format)
+                        switch (e.Argument)
                         {
+                            case TransformColorFormats.BW_1bpp_V:
+                                for (int px = 0; px < 7; px++)
+                                {
+                                    pixelByte = ((y + px) * bmp.Width + x) * 4;
+
+                                    if (rgbValues[pixelByte + 2] > 128 ||   // Red
+                                        rgbValues[pixelByte + 1] > 128 ||   // Green
+                                        rgbValues[pixelByte + 0] > 128)     // Blue
+                                        ColorByte &= ~(1 << px);    // White/remove
+                                    else
+                                        ColorByte |= 1 << px;       // Black/set
+                                }
+                                bitInBlock = 0;
+                                break;
+                            case TransformColorFormats.BW_1bpp_H:
+                            case TransformColorFormats.BW_1bpp_C:
+                                if (rgbValues[pixelByte + 2] > 128 ||   // Red
+                                    rgbValues[pixelByte + 1] > 128 ||   // Green
+                                    rgbValues[pixelByte + 0] > 128)     // Blue
+                                    ColorByte &= ~(1 << bitInBlock);    // White/remove
+                                else
+                                    ColorByte |= 1 << bitInBlock;       // Black/set
+
+                                break;
                             case TransformColorFormats.RGB_332:
-                                ColorByte = 
+                                ColorByte =
                                     (rgbValues[pixelByte + 2] & 0xE0) |         // 0xE0 = 1110 0000
                                     (rgbValues[pixelByte + 1] & 0xE0) >> 3 |
                                     (rgbValues[pixelByte + 0] & 0xC0) >> 6;     // 0xC0 = 1100 0000
@@ -261,49 +237,41 @@ namespace Image2Bitmap
                                 break;
                         }
 
-                        result.AppendFormat(codeFormat, ColorByte);
-                        pixelsCurrent++;
-
-                        rowPos++;
-                        if (rowPos == 16)
+                        if (!is_1bpp || bitInBlock == 0)
                         {
-                            rowPos = 0;
-                            result.Append(Environment.NewLine + "\t");
+                            result.AppendFormat(codeFormat, ColorByte);
+                            pixelsCurrent++;
+                            rowPos++;
+
+                            if (rowPos == 16)
+                            {
+                                rowPos = 0;
+                                result.Append(Environment.NewLine + "\t");
+                            }
+
+                            bitInBlock = 7; // BW/1bpp bit position reset
+                            ColorByte = 0;  // Reset data
                         }
+                        else
+                        {
+                            bitInBlock--;
+                        }
+                    }
+
+                    if ((TransformColorFormats) e.Argument == TransformColorFormats.BW_1bpp_V)
+                    {
+                        y += 7;
                     }
                     bgWork.ReportProgress((int)((double)pixelsCurrent / (double)pixelsTotal * 100));
                 }
             }
 
             result.Append(Environment.NewLine + "};");
-            return result.ToString();
+            e.Result = result.ToString();
         }
-
         #endregion
 
-        private void ImageToCode(object sender, DoWorkEventArgs e)
-        {
-            switch (e.Argument)
-            {
-                case TransformColorFormats.Mono_1bpp_H:
-                    e.Result = ImageToCode_1bpp(imageBox.Image, true);
-                    break;
-                case TransformColorFormats.Mono_1bpp_V:
-                    e.Result = ImageToCode_1bpp(imageBox.Image, false);
-                    break;
-                case TransformColorFormats.RGB_332:
-                case TransformColorFormats.RGB_444:
-                case TransformColorFormats.RGB_565:
-                    e.Result = ImageToCode((TransformColorFormats)e.Argument);
-                    break;
-                default:
-                    MessageBox.Show("Sorry, unsupported.");
-                    break;
-            }
-        }
-
-#region Code2Image
-
+        #region Code2Image
         private void CodeToImage(object sender, DoWorkEventArgs e)
         {
             TransformColorFormats format = (TransformColorFormats)e.Argument;
@@ -312,7 +280,8 @@ namespace Image2Bitmap
             int Width = 0, Height = 0;
             int x = 0, y = 0;
 
-            this.Invoke(new MethodInvoker(delegate {
+            this.Invoke(new MethodInvoker(delegate
+            {
                 Width = (int)num_Width.Value;
                 Height = (int)num_Height.Value;
                 Code = GeneratedCode.Text;
@@ -325,13 +294,13 @@ namespace Image2Bitmap
             }
 
             // Some additional checks
-            if (format == TransformColorFormats.Mono_1bpp_H && Width % 8 != 0)
+            if (format == TransformColorFormats.BW_1bpp_H && Width % 8 != 0)
             {
                 MessageBox.Show("Error:\nWidth has to be multiple 8!");
                 return;
             }
 
-            if (format == TransformColorFormats.Mono_1bpp_V && Height % 8 != 0)
+            if (format == TransformColorFormats.BW_1bpp_V && Height % 8 != 0)
             {
                 MessageBox.Show("Error:\nHeight has to be multiple 8!");
                 return;
@@ -340,17 +309,19 @@ namespace Image2Bitmap
             Bitmap result = new Bitmap(Width, Height);
 
             int pixelsCurrent = 0;
+            int byteOffset = 0;
             int pixelsTotal = Width * Height;
             int pixelColor;
 
-            // Two ways re symbol-by-symbol, or use regex. What faster?
+            // Two ways read symbol-by-symbol, or use regex. What faster?
             // Read from symbos "{", ignore tabs and spaces, read to "}". Use "," as separator.
             // Use regex and search pattern "0x([0-9a-fA-F]{2}),"
             string regex = "";
             switch (format)
             {
-                case TransformColorFormats.Mono_1bpp_H:
-                case TransformColorFormats.Mono_1bpp_V:
+                case TransformColorFormats.BW_1bpp_C:
+                case TransformColorFormats.BW_1bpp_H:
+                case TransformColorFormats.BW_1bpp_V:
                 case TransformColorFormats.RGB_332:
                     regex = @"0x([0-9a-fA-F]{2}),"; // 0xAB (one byte)
                     break;
@@ -359,22 +330,32 @@ namespace Image2Bitmap
                     regex = @"0x([0-9a-fA-F]{4}),"; // 0xABCD (two bytes)
                     break;
             }
-            
+
             foreach (Match m in Regex.Matches(Code, regex))
             {
                 pixelColor = int.Parse(m.Groups[1].Value, System.Globalization.NumberStyles.HexNumber);
 
                 switch (format)
                 {
-                    case TransformColorFormats.Mono_1bpp_H:
-                        for (int offset = 7; offset >= 0; offset--)
+                    case TransformColorFormats.BW_1bpp_C:
+                    case TransformColorFormats.BW_1bpp_H:
+                        for (byteOffset = 7; byteOffset >= 0; byteOffset--)
                         {
-                            result.SetPixel(x, y, ((pixelColor & (1 << offset)) > 0) ? Color.Black : Color.White);
+                            result.SetPixel(x, y, ((pixelColor & (1 << byteOffset)) > 0) ? Color.Black : Color.White);
                             x++;
+                            if (x == Width)
+                            {
+                                x = 0;
+                                y++;
+                                if (y == Height)
+                                {
+                                    break;  // All done. Stop conversion.
+                                }
+                            }
                         }
                         x--;
                         break;
-                    case TransformColorFormats.Mono_1bpp_V:
+                    case TransformColorFormats.BW_1bpp_V:
                         for (int offset = 7; offset >= 0; offset--)
                         {
                             result.SetPixel(x, y + offset, ((pixelColor & (1 << offset)) > 0) ? Color.Black : Color.White);
@@ -397,7 +378,7 @@ namespace Image2Bitmap
                 if (x == Width)
                 {
                     x = 0;
-                    if (format == TransformColorFormats.Mono_1bpp_V)
+                    if (format == TransformColorFormats.BW_1bpp_V)
                         y += 8;
                     else
                         y += 1;
